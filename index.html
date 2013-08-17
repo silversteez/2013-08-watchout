@@ -1,0 +1,81 @@
+<html>
+<head><title>blah</title>
+    
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="http://code.jquery.com/jquery-1.10.2.min.js" charset="utf-8"></script>
+<script src="http://underscorejs.org/underscore-min.js" charset="utf-8"></script>
+
+</head>
+<body>
+  <svg width="600px" height="400px"><circle id="player" cx='100px' cy='100px' r='10px' fill="yellow" stroke="orange" stroke-width="5px" /></svg>
+    
+</body>
+<script>
+$(document).ready(function() {
+
+  var enemyMaker = function() {
+    var enemy = {};
+    enemy.posX = undefined;
+    enemy.posY = undefined;
+    enemy.setNewPosition = function() {
+      this.posX = Math.floor(Math.random() * 560) + 20;
+      this.posY = Math.floor(Math.random() * 360) + 20;
+    }
+    enemy.setNewPosition();
+    return enemy;
+  };
+
+  var createEnemies = function(amount) {
+    var enemies = [];
+    for (var i = 0; i < amount; i++) {
+      enemies.push(enemyMaker());
+    }
+    return enemies;
+  };
+
+  var updateEnemyPositions = function(enemies) {
+    _.each(enemies, function(enemy) {
+      enemy.setNewPosition();
+    });
+    return enemies;
+  };
+
+  var gameBoard = d3.select('svg');
+
+  var update = function(data) {
+    var enemies = gameBoard.selectAll('circle').data(data);
+
+    enemies.enter().append('circle')
+      .attr("class", "enemy")
+      .attr("cx", function(d) { return d.posX + "px" })
+      .attr("cy", function(d) { return d.posY + "px" })
+      .attr("r", "15px")
+      .attr("fill", "red");
+
+    enemies.transition()
+      .duration(1000)
+      .attrTween("cx", function(d, i, a) {
+        a = parseInt(a);
+        return d3.interpolate(a, d.posX) ;
+      })
+      .attrTween("cy", function(d, i, a) {
+        a = parseInt(a);
+        return d3.interpolate(a, d.posY) ;
+      }); 
+  };
+
+  var enemies = createEnemies(30);
+
+  update(enemies);
+
+  setInterval(function() {
+    enemies = updateEnemyPositions(enemies);
+    update(enemies);
+    console.log("setInterval...")
+  }, 1000);
+
+  $('circle').on('click', function() { alert("hi");});
+
+});
+</script>
+</html>
