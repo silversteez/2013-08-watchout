@@ -7,15 +7,42 @@
 
 </head>
 <body>
+  <div id="game-info">
+    <p id="player-score"></p>
+    <p id="high-score"></p>
+  </div>
   <svg width="600px" height="400px">
-
     <circle id="player" cx='100px' cy='100px' r='10px' fill="yellow" stroke="orange" stroke-width="5px" />
-
-    </svg>
+  </svg>
     
 </body>
 <script>
 $(document).ready(function() {
+
+  var stats = {
+    playerScore: 0,
+    highScore: 0
+  };
+
+  var $playerScore = $('#player-score');
+  var $highScore = $('#high-score');
+
+  var gameBoard = d3.select('svg');
+  var player = d3.select('#player');
+
+  var incrementScore = function() {
+    stats.playerScore++;
+    if (stats.playerScore >= stats.highScore) {
+      stats.highScore = stats.playerScore;
+    }
+    $playerScore.text("Player Score: " + stats.playerScore);
+    $highScore.text("High Score: " + stats.highScore);
+  };
+
+  var resetPlayerScore = function() {
+    stats.playerScore = 0;
+    $playerScore.text("Player Score: " + stats.playerScore);
+  };
 
   var enemyMaker = function() {
     var enemy = {};
@@ -44,8 +71,6 @@ $(document).ready(function() {
     return enemies;
   };
 
-  var gameBoard = d3.select('svg');
-
   var update = function(data) {
     var enemies = gameBoard.selectAll('circle.enemy').data(data);
 
@@ -55,8 +80,6 @@ $(document).ready(function() {
       .attr("cy", function(d) { return d.posY + "px" })
       .attr("r", "15px")
       .attr("fill", "red");
-
-// console.log(enemies);
 
     enemies.transition()
       .duration(1000)
@@ -74,20 +97,17 @@ $(document).ready(function() {
 
   update(enemies);
 
-
   setInterval(function() {
     enemies = updateEnemyPositions(enemies);
     update(enemies);
   }, 1000);
 
+  setInterval(function() {
+    incrementScore();
+  }, 50);
+
   d3.selectAll('.enemy').on('mouseover', function(obj) {
-    
-  });
-
-  var player = d3.select('#player');
-
-  player.on('mousedown', function(obj){
-    console.log("blah");
+    resetPlayerScore();
   });
 
   var dragPlayer = d3.behavior.drag()
