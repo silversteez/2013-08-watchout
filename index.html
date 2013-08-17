@@ -5,7 +5,8 @@
 <script src="http://code.jquery.com/jquery-1.10.2.min.js" charset="utf-8"></script>
 <script src="http://underscorejs.org/underscore-min.js" charset="utf-8"></script>
 <script src="/socket.io/socket.io.js"></script>
-
+<style>
+</style>
 </head>
 <body>
   <div id="game-info">
@@ -22,7 +23,7 @@
 $(document).ready(function() {
 
   var socket = io.connect('http://10.0.1.61:8012');//always change to IP of host
-  var amHost = "slave";
+  var amHost = undefined;
 
   var stats = {
     playerScore: 0,
@@ -36,18 +37,21 @@ $(document).ready(function() {
 
   var player = d3.select('#hostplayer');
   var slave = d3.select('#slaveplayer');
+  var enemies;
 
   var setUpHost = function() {
     amHost = "host";
+    player.call(dragHost);
+    
     setInterval(function() {
-      console.log("doing host stuff");
-      enemies = updateEnemyPositions(enemies);
-      socket.emit('hostEnemyData', { enemyData: enemies });
-    }, 1000);
+      enemyDataArr = updateEnemyPositions(enemyDataArr);
+      socket.emit('hostEnemyData', { enemyData: enemyDataArr });
+    }, 800);
   };
 
   var setUpSlave = function() {
-    //stuff
+    amHost = "slave";
+    slave.call(dragSlave);
   }
 
   var incrementScore = function() {
@@ -91,8 +95,26 @@ $(document).ready(function() {
     return enemies;
   };
 
+  var done = false;
+  var detectCollisions = function() {
+    return function() {
+      var nodeToCheck;
+      if (amHost === "host") {
+        nodeToCheck = player;
+      } else  {
+        nodeToCheck = slave;
+      }
+      var enemy = d3.select(this);
+      if (Math.sqrt(Math.pow(parseInt(nodeToCheck.attr("cx")) - parseInt(enemy.attr("cx")), 2)
+        + Math.pow(parseInt(nodeToCheck.attr("cy")) - parseInt(enemy.attr("cy")), 2), 2) < 20) {
+         resetPlayerScore();
+      }
+       
+    };
+  };
+
   var update = function(data) {
-    var enemies = gameBoard.selectAll('circle.enemy').data(data);
+    enemies = gameBoard.selectAll('circle.enemy').data(data);
 
     enemies.enter().append('circle')
       .attr("class", "enemy")
@@ -110,20 +132,17 @@ $(document).ready(function() {
       .attrTween("cy", function(d, i, a) {
         a = parseInt(a);
         return d3.interpolate(a, d.posY) ;
-      }); 
+      })
+      .tween('custom', detectCollisions); 
   };
 
-  var enemies = createEnemies(30);
+  var enemyDataArr = createEnemies(30);
 
-  update(enemies);
+  update(enemyDataArr);
 
   setInterval(function() {
     incrementScore();
   }, 50);
-
-  d3.selectAll('.enemy').on('mouseover', function(obj) {
-    resetPlayerScore();
-  });
 
   var dragHost = d3.behavior.drag()
     .on("drag", function(d) {
@@ -147,9 +166,6 @@ $(document).ready(function() {
       });
   });
 
-  player.call(dragHost);
-  slave.call(dragSlave);
-
   socket.on('connected', function (data) {
     console.log(data);
     socket.emit('hostQuery', { youAreHost: false });
@@ -158,7 +174,7 @@ $(document).ready(function() {
   socket.on('hostResponse', function(data) {
     if (data.youAreHost === true) {
       setUpHost();
-    } else {
+    } else if (amHost !== "host") {
       setUpSlave();
     }
   });
